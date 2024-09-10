@@ -1,0 +1,109 @@
+name: 'Tofu Plan'
+
+on:
+  # push:
+  #   branches:
+  #   - main
+  workflow_dispatch:
+
+concurrency:
+  group: workplace-foundation
+  cancel-in-progress: false
+
+#Special permissions required for OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+#These environment variables are used by the Tofu azure provider to setup OIDD authenticate.
+env:
+  ARM_TENANT_ID: "${{ secrets.ARM_TENANT_ID }}"
+  ARM_CLIENT_ID: "${{ secrets.ARM_CLIENT_ID }}"
+  ARM_SAS_TOKEN: "${{ secrets.ARM_SAS_TOKEN }}"
+  TF_LOG: "${{ vars.TF_LOG }}"
+
+jobs:
+  Tofu-plan:
+    name: 'Tofu Plan'
+    runs-on: ubuntu-latest
+    env:
+      #this is needed since we are running Tofu with read-only permissions
+      ARM_SKIP_PROVIDER_REGISTRATION: true
+    outputs:
+      tfplanExitCode: ${{ steps.tf-plan.outputs.exitcode }}
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Install the latest version of the Tofu CLI
+    - name: Setup Tofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_wrapper: false
+        tofu_version: 1.7.0
+
+    # Initialize a new or existing Tofu working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Tofu init
+      run: tofu init
+
+    # Checks that all Tofu configuration files adhere to a canonical format
+    # Will fail the build if not
+    - name: Tofu Format
+      run: tofu fmt -check
+
+    # Generates an execution plan for Tofu
+    # An exit code of 0 indicated no changes, 1 a Tofu failure, 2 there are pending changes.
+    - name: Tofu Plan
+      id: tf-plan
+      run: |
+        export exitcode=0
+        tofu plan -detailed-exitcode -no-color -out tfplan || export exitcode=$?
+
+        echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+
+        if [ $exitcode -eq 1 ]; then
+          echo Tofu Plan Failed!
+          exit 1
+        else
+          exit 0
+        fi
+
+    - name: Install tfcmt
+      shell: bash
+      run: |
+        echo "****** Install tfcmt *****"
+        REPO="suzuki-shunsuke/tfcmt"
+        TAG="v4.8.0"
+
+        # Use the GitHub API to get the release by tag
+        RELEASE=$(curl --silent "https://api.github.com/repos/$REPO/releases/tags/$TAG")
+
+        # Check if the release exists
+        if echo "$RELEASE" | grep -q "Not Found"; then
+          echo "Release $TAG does not exist"
+        else
+          gh release download $TAG \
+            --pattern 'tfcmt_linux_amd64.tar.gz' \
+            --repo $REPO \
+            --dir /tmp \
+            --skip-existing
+          tar -xzf /tmp/tfcmt_linux_amd64.tar.gz -C /tmp
+          sudo mv /tmp/tfcmt /usr/local/bin/tfcmt && sudo chmod +x /usr/local/bin/tfcmt
+          tfcmt --version
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    # Publish Tofu Plan as task summary
+    - name: Publish Tofu Plan as task summary
+      run: |
+        echo "Publishing tfcmt output as step summary ..."
+        tfcmt --config $GITHUB_WORKSPACE/.github/tfcmt.yml \
+          --output plan.md plan -- tofu show tfplan > /dev/null 2>&1
+        echo "$(cat plan.md)" >> $GITHUB_STEP_SUMMARY
+        echo "Posting tfcmt ... done"
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
