@@ -92,3 +92,14 @@ module "device_configuration" {
   groups_map           = module.groups[0].groups_map
   filters_map          = module.filters[0].filters_map
 }
+
+module "device_enrollment_configurations" {
+  count              = var.manage_device_enrollment_configurations ? 1 : 0
+  source             = "./device-enrollment-configurations"
+  displayname_suffix = var.displayname_suffix
+  displayname_prefix = var.displayname_prefix
+  groups_map         = module.groups[0].groups_map
+  filters_map        = module.filters[0].filters_map
+  # Example: Transport simple values into a module
+  device_enrollment_limit = var.device_enrollment_limit
+}
