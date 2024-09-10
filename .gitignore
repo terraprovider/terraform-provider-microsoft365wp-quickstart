@@ -1,0 +1,4 @@
+.DS_Store
+.terraform.lock.hcl
+credentials.ps1
+.terraform

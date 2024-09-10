@@ -1,8 +1,3 @@
-variable "include_multi_session" {
-  type    = bool
-  default = false
-}
-
 variable "include_mobile" {
   type    = bool
   default = true

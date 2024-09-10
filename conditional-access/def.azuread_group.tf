@@ -11,7 +11,7 @@ locals {
       display_name            = "CFG - CA - All Admins"
       description             = "All Admin accounts"
       dynamic_membership      = true
-      dynamic_membership_rule = "(user.userPrincipalName -startsWith \"adm.\")"
+      dynamic_membership_rule = var.ca_all_admins_dynamic_group_rule
     }
   }
 }
