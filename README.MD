@@ -52,7 +52,7 @@ I.e.: Configure the `backend` section in `terraform.tf` to use the Azure Storage
 
 See the [Configuring a Service Principal for managing EntraID](https://registry.terraform.io/providers/terraprovider/microsoft365wp/latest/docs/guides/service-principal-configuration) for more details on how to authenticate against Entra ID.
 
-Make sure the Service Principal has write permissions to the Terraform state.
+Make sure the Service Principal has write permissions to the Terraform state. You can achieve this by assigning the "Storage Blob Data Contributor" role to the Service Principal.
 
 We recommend using Federated Credentials via OpenID Connect. This way no credentials need to be stored.
 

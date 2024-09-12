@@ -20,7 +20,6 @@ permissions:
 env:
   ARM_TENANT_ID: "${{ secrets.ARM_TENANT_ID }}"
   ARM_CLIENT_ID: "${{ secrets.ARM_CLIENT_ID }}"
-  ARM_SAS_TOKEN: "${{ secrets.ARM_SAS_TOKEN }}"
   TF_LOG: "${{ vars.TF_LOG }}"
 
 jobs:
