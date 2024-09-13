@@ -4,7 +4,7 @@ terraform {
   required_version = ">= 1.7"
   required_providers {
     microsoft365wp = {
-      source  = "registry.terraform.io/terraprovider/microsoft365wp"
+      source  = "terraprovider/microsoft365wp"
       version = "0.12.9"
     }
     azuread = {
