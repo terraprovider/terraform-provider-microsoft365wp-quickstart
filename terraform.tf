@@ -5,7 +5,7 @@ terraform {
   required_providers {
     microsoft365wp = {
       source  = "terraprovider/microsoft365wp"
-      version = "0.12.9"
+      version = "0.14"
     }
     azuread = {
       source  = "hashicorp/azuread"
