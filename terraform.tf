@@ -1,5 +1,3 @@
-## Providers and Backend Configuration
-
 terraform {
   required_version = ">= 1.7"
   required_providers {
@@ -13,12 +11,13 @@ terraform {
     }
   }
   backend "azurerm" {
-    storage_account_name = "storageaccountname"
-    subscription_id      = "000..."
+    storage_account_name = "c4a8toydexports01"
+    subscription_id      = "3f0a7847-0bd4-4efe-86c9-84db2cb032e4"
     container_name       = "tfstate"
     key                  = "terraform.tfstate"
     use_azuread_auth     = true
     use_oidc             = true
+    snapshot             = true
   }
 }
 
