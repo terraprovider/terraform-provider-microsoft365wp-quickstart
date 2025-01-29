@@ -3,7 +3,7 @@ terraform {
   required_providers {
     microsoft365wp = {
       source  = "terraprovider/microsoft365wp"
-      version = "0.14"
+      version = "0.15.1"
     }
     azuread = {
       source  = "hashicorp/azuread"
@@ -14,7 +14,7 @@ terraform {
     storage_account_name = "c4a8toydexports01"
     subscription_id      = "3f0a7847-0bd4-4efe-86c9-84db2cb032e4"
     container_name       = "tfstate"
-    key                  = "terraform.tfstate"
+    key                  = "terraform-qs.tfstate"
     use_azuread_auth     = true
     use_oidc             = true
     snapshot             = true
