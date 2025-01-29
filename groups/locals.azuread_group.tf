@@ -4,7 +4,12 @@
 
 locals {
 
-  base_azuread_groups_map = { for k, v in merge(local.azuread_groups_definitions_map) : k => {
+  merged_groups_map = merge(
+    local.azuread_groups_definitions_map,
+    local.azuread_groups_exported_map,
+  )
+
+  base_azuread_groups_map = { for k, v in merge(local.merged_groups_map) : k => {
     naming = {
       prefix = var.displayname_prefix
       name   = v.display_name

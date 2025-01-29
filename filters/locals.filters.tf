@@ -2,6 +2,7 @@ locals {
   all_filters_merged = merge(
     { for k, v in local.all_filters_workplace : k => v if var.include_workplace },
     { for k, v in local.all_filters_mobile : k => v if var.include_mobile },
+    { for k, v in local.all_filters_exported : k => v },
     # Include custom policies
     var.filters_customization.filters_custom_definitions
   )
