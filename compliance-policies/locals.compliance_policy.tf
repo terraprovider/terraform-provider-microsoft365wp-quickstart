@@ -20,14 +20,16 @@ locals {
     { for k, v in local.all_microsoft365wp_policies : k => v if var.include_workplace },
     { for k, v in local.all_mobile_policies : k => v if var.include_mobile },
     # Include custom policies
-    var.policy_customization.policies_custom_definitions
+    var.policy_customization.policies_custom_definitions,
+    # Include exported policies
+    local.all_compliance_policies_exported
   )
 
   # Locals map for all compliance policies
   # Computed values to enable output/debugging
   base_all_compliance_policies = { for key, value in local.all_compliance_policies_merged : key => {
     display_name = format("%s%s%s", var.displayname_prefix, value.display_name, var.displayname_suffix)
-    assignments = concat(
+    assignments = try(value.assignments, concat(
       # If there is a target group, add it to the assignments
       (try(value.target_group, "") != "" && try(value.target_group, "") != "all_users") ? [
         {
@@ -80,6 +82,7 @@ locals {
           }
         } }
       ]
+      )
     )
     scheduled_actions_for_rule = try(value.scheduled_actions_for_rule, null)
     windows10                  = try(value.windows10, null)

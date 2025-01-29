@@ -12,4 +12,6 @@ resource "microsoft365wp_device_compliance_policy" "all" {
   android_device_owner       = each.value.android_device_owner
   android_work_profile       = each.value.android_work_profile
   ios                        = each.value.ios
+
+  depends_on = [microsoft365wp_notification_message_template.all]
 }
