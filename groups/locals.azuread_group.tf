@@ -18,6 +18,9 @@ locals {
     description             = try(v.description, "")
     dynamic_membership      = try(v.dynamic_membership, false)
     dynamic_membership_rule = try(v.dynamic_membership_rule, "")
+    mail_enabled            = try(v.mail_enabled, false)
+    security_enabled        = try(v.security_enabled, true)
+    assignable_to_role      = try(v.assignable_to_role, false)
   } }
 }
 
