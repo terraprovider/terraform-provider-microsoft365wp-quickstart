@@ -115,7 +115,7 @@ function Export-EntraIDGroups {
         $moduleFolder = "groups",
         $localsFileName = "def.groups.exported.tf",
         $tfLocalsName = "azuread_groups_exported_map",
-        $mappingFileName = "groups.mappings.json",
+        $mappingFileName = "mappings.groups.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -208,7 +208,7 @@ locals {
 
 function Import-MappedObjects {
     param(
-        $mappingFileName = "groups.mappings.json",
+        $mappingFileName = "mappings.groups.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
         $objectVar = "{TFName}",
         $tfExecutable = "tofu",
@@ -236,7 +236,7 @@ function Import-MappedObjects {
 
 function Import-EntraIDGroups {
     param(
-        $mappingFileName = "groups.mappings.json",
+        $mappingFileName = "mappings.groups.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
@@ -250,7 +250,7 @@ function Export-IntuneFilters {
         $moduleFolder = "filters",
         $localsFileName = "def.exported.tf",
         $tfLocalsName = "all_filters_exported",
-        $mappingFileName = "filters.mappings.json",
+        $mappingFileName = "mappings.filters.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -338,7 +338,7 @@ locals {
 
 function Import-IntuneFilters {
     param(
-        $mappingFileName = "filters.mappings.json",
+        $mappingFileName = "mappings.filters.json",
         $resourceName = 'module.filters[0].microsoft365wp_device_and_app_management_assignment_filter.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
@@ -351,7 +351,7 @@ function Export-IntuneNotificationMessageTemplates {
         $moduleFolder = "compliance-policies",
         $localsFileName = "def.notification_message.exported.tf",
         $tfLocalsName = "def_notification_message_templates_exported",
-        $mappingFileName = "notification-message-templates.mappings.json",
+        $mappingFileName = "mappings.notification-message-templates.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -437,7 +437,7 @@ locals {
 
 function Import-IntuneNotificationMessageTemplates {
     param(
-        $mappingFileName = "notification-message-templates.mappings.json",
+        $mappingFileName = "mappings.notification-message-templates.json",
         $resourceName = 'module.compliance_policies[0].microsoft365wp_notification_message_template.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
@@ -450,12 +450,12 @@ function Export-IntuneCompliancePolicies {
         $moduleFolder = "compliance-policies",
         $localsFileName = "def.exported.tf",
         $tfLocalsName = "all_compliance_policies_exported",
-        $mappingFileName = "compliance-policies.mappings.json",
-        $groupsFileName = "groups.mappings.json",
+        $mappingFileName = "mappings.compliance-policies.json",
+        $groupsFileName = "mappings.groups.json",
         $groupsResourceName = "var.groups_map.{groupTFName}.id",
-        $notificationMessageTemplatesFileName = "notification-message-templates.mappings.json",
+        $notificationMessageTemplatesFileName = "mappings.notification-message-templates.json",
         $notificationMessageTemplatesResourceName = 'microsoft365wp_notification_message_template.all["{nmTFName}"].id',
-        $filterFileName = "filters.mappings.json",
+        $filterFileName = "mappings.filters.json",
         $filterResourceName = 'var.filters_map.{filterTFName}.id',
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
@@ -563,7 +563,7 @@ locals {
 
 function Import-IntuneCompliancePolicies {
     param(
-        $mappingFileName = "compliance-policies.mappings.json",
+        $mappingFileName = "mappings.compliance-policies.json",
         $resourceName = 'module.compliance_policies[0].microsoft365wp_device_compliance_policy.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
