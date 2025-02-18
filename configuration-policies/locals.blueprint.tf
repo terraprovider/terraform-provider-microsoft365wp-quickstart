@@ -33,6 +33,7 @@ locals {
   device_configuration_policies_merged = merge(
     { for k, v in local.device_configuration_policies_workplace_map : k => v if var.include_workplace },
     { for k, v in local.device_configuration_policies_mobile_map : k => v if var.include_mobile },
+    local.all_configuration_policies_exported,
     # Include custom policies
     var.policy_customization.policies_custom_definitions
   )

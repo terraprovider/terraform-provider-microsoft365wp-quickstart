@@ -53,7 +53,8 @@ terraform {
       source = "terraprovider/microsoft365wp"
     }
     azuread = {
-      source = "hashicorp/azuread"
+      source  = "hashicorp/azuread"
+      version = "2.47"
     }
   }
 }
@@ -66,7 +67,7 @@ import {
 
     # this may print an error that we can just ignore
     try {
-        if ($initUpgrade -or -not (Test-Path ([IO.Path]::Combine($tempTfDir, ".terraform", "providers", "tfp-c4a8-workplace.c4a8.io", "c4a8", "workplace")))) {
+        if ($initUpgrade -or -not (Test-Path ([IO.Path]::Combine($tempTfDir, ".terraform")))) {
             & $terraformExecutable "-chdir=$tempTfDir" init -upgrade
         }
         & $terraformExecutable "-chdir=$tempTfDir" plan "-generate-config-out=$tempTfFileGenerated"
@@ -151,6 +152,12 @@ locals {
 "@ | Set-Content -Path $moduleFolder/$localsFileName
 
     foreach ($group in $groups) {
+        # Filter out Exchange-only groups that the provider does not support
+        if ($group.mailEnabled -and $group.groupTypes -notcontains "Unified") {
+            "## Skipping non-unified mail-enabled group $($group.displayName)"
+            continue
+        }
+
         #$groupTFObject = $group | Select-Object -Property mailEnabled, securityEnabled, membershipRule, displayName, description, groupTypes
         $groupTfName = build-name -name $group.displayName
         # $tfGroupsExport[$groupTfName] = $groupTFObject
@@ -166,12 +173,13 @@ locals {
         # Create a raw JSON export as backup
         $group | ConvertTo-Json -Depth 100 | Set-Content -Path "$moduleFolder/json/$groupTfName.json"
 
-        Generate-TFConfig -resourceType "azuread_group" -importId "/groups/$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
+        #Generate-TFConfig -resourceType "azuread_group" -importId "/groups/$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
+        Generate-TFConfig -resourceType "azuread_group" -importId "$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
 
         $tfTemplate = (Get-Content -Path "exportedGroup.tf") -replace "resource `"azuread_group`" `".*`" {", "$($groupTfName) = {"
 
         # Remove unneeded or unsupported attributes
-        $attributesToRemove = @("owners", "members", "mail_nickname", "onpremises_group_type", "visibility" )
+        $attributesToRemove = @("owners", "members", "onpremises_group_type", "visibility" )
         foreach ($attribute in $attributesToRemove) {
             "## replacing $attribute"
             $tfTemplate = $tfTemplate -replace "(?im)^\s*$attribute\s*=\s*.*$", ''
@@ -241,7 +249,7 @@ function Import-EntraIDGroups {
         $tfExecutable = "tofu"
     )
 
-    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable -objectPrefix "/groups/"
+    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable -objectPrefix ""
 
 }
 
@@ -540,7 +548,7 @@ locals {
 
         # Warn if tfTemplate is contains a unique identifier (that is not resolved)
         if ($tfTemplate -match "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}") {
-            "## Found a unique identifier in $groupTfName that is not resolved." >> log.txt
+            "## Found a unique identifier in $policyTfName that is not resolved." >> log.txt
         }
 
         # Remove empty lines
