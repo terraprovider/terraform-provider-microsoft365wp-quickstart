@@ -53,8 +53,7 @@ terraform {
       source = "terraprovider/microsoft365wp"
     }
     azuread = {
-      source  = "hashicorp/azuread"
-      version = "2.47"
+      source = "hashicorp/azuread"
     }
   }
 }
@@ -67,7 +66,7 @@ import {
 
     # this may print an error that we can just ignore
     try {
-        if ($initUpgrade -or -not (Test-Path ([IO.Path]::Combine($tempTfDir, ".terraform")))) {
+        if ($initUpgrade -or -not (Test-Path ([IO.Path]::Combine($tempTfDir, ".terraform", "providers", "tfp-c4a8-workplace.c4a8.io", "c4a8", "workplace")))) {
             & $terraformExecutable "-chdir=$tempTfDir" init -upgrade
         }
         & $terraformExecutable "-chdir=$tempTfDir" plan "-generate-config-out=$tempTfFileGenerated"
@@ -100,7 +99,7 @@ import {
     # format to remove extra spaces
     $result = $result | & $terraformExecutable fmt -
 
-    if (-not $outPath) {
+    if (-not $outPath) { 
         $outPath = "${resourceType}_${resourceName}.tf"
     }
     $result | Out-File $outPath -Encoding utf8NoBOM
@@ -116,7 +115,7 @@ function Export-EntraIDGroups {
         $moduleFolder = "groups",
         $localsFileName = "def.groups.exported.tf",
         $tfLocalsName = "azuread_groups_exported_map",
-        $mappingFileName = "mappings.groups.json",
+        $mappingFileName = "groups.mappings.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -152,12 +151,6 @@ locals {
 "@ | Set-Content -Path $moduleFolder/$localsFileName
 
     foreach ($group in $groups) {
-        # Filter out Exchange-only groups that the provider does not support
-        if ($group.mailEnabled -and $group.groupTypes -notcontains "Unified") {
-            "## Skipping non-unified mail-enabled group $($group.displayName)"
-            continue
-        }
-
         #$groupTFObject = $group | Select-Object -Property mailEnabled, securityEnabled, membershipRule, displayName, description, groupTypes
         $groupTfName = build-name -name $group.displayName
         # $tfGroupsExport[$groupTfName] = $groupTFObject
@@ -173,13 +166,12 @@ locals {
         # Create a raw JSON export as backup
         $group | ConvertTo-Json -Depth 100 | Set-Content -Path "$moduleFolder/json/$groupTfName.json"
 
-        #Generate-TFConfig -resourceType "azuread_group" -importId "/groups/$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
-        Generate-TFConfig -resourceType "azuread_group" -importId "$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
+        Generate-TFConfig -resourceType "azuread_group" -importId "/groups/$($group.id)" -resourceName $groupTfName -outPath "exportedGroup.tf" -terraformExecutable $tfExecutable
 
         $tfTemplate = (Get-Content -Path "exportedGroup.tf") -replace "resource `"azuread_group`" `".*`" {", "$($groupTfName) = {"
 
-        # Remove unneeded or unsupported attributes
-        $attributesToRemove = @("owners", "members", "onpremises_group_type", "visibility" )
+        # Remove unneeded attributes
+        $attributesToRemove = @("owners", "members", "mail_nickname" )
         foreach ($attribute in $attributesToRemove) {
             "## replacing $attribute"
             $tfTemplate = $tfTemplate -replace "(?im)^\s*$attribute\s*=\s*.*$", ''
@@ -216,41 +208,32 @@ locals {
 
 function Import-MappedObjects {
     param(
-        $mappingFileName = "mappings.groups.json",
+        $mappingFileName = "groups.mappings.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
         $objectVar = "{TFName}",
-        $tfExecutable = "tofu",
-        $objectPrefix = ""
+        $tfExecutable = "tofu"
     )
 
     # Read the mapping file
-    $mapping = Get-Content -Raw $mappingFileName | ConvertFrom-Json -Depth 100 -AsHashtable
-
-    # Get list of existing resources
-    $existingResources = & $tfExecutable state list
+    $groupMapping = Get-Content -Raw $mappingFileName | ConvertFrom-Json -Depth 100 -AsHashtable
 
     # Iterate over the mapping and generate the import commands
-    foreach ($uid in $mapping.Keys) {
-        $TFName = $mapping[$uid]
-        $resourceString = $resourceName -replace $objectVar, $TFName
-        if ($existingResources -contains $resourceString) {
-            "## Resource '$resourceString' already exists in the state."
-            continue
-        }
-        & $tfExecutable import $resourceString ($objectPrefix + $uid)
+    foreach ($uid in $groupMapping.Keys) {
+        $groupTFName = $groupMapping[$uid]
+        $resourceString = $resourceName -replace $objectVar, $groupTFName
+        & $tfExecutable import $resourceString $uid
     }
 
 }
 
 function Import-EntraIDGroups {
     param(
-        $mappingFileName = "mappings.groups.json",
+        $mappingFileName = "groups.mappings.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
 
-    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable -objectPrefix ""
-
+    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable
 }
 
 function Export-IntuneFilters {
@@ -258,7 +241,7 @@ function Export-IntuneFilters {
         $moduleFolder = "filters",
         $localsFileName = "def.exported.tf",
         $tfLocalsName = "all_filters_exported",
-        $mappingFileName = "mappings.filters.json",
+        $mappingFileName = "filters.mappings.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -295,7 +278,7 @@ locals {
 "@ | Set-Content -Path $moduleFolder/$localsFileName
 
     foreach ($filter in $filters) {
-        #$filterTFObject = $filter | Select-Object -Property displayName, platform, assignmentFilterManagementType, description, rule
+        #$filterTFObject = $filter | Select-Object -Property displayName, platform, assignmentFilterManagementType, description, rule 
         $filterTfName = build-name -name $filter.displayName
         #$tfFiltersExport[$filterTfName] = $filterTFObject
         # Check that the mapping does not already contain the id or FilterTFName
@@ -309,7 +292,7 @@ locals {
 
         # Create a raw JSON export as backup
         $filter | ConvertTo-Json -Depth 100 | Set-Content -Path "$moduleFolder/json/$filterTfName.json"
-
+  
         Generate-TFConfig -resourceType "microsoft365wp_device_and_app_management_assignment_filter" -importId $filter.id -resourceName $filterTfName -outPath "exportedFilter.tf" -terraformExecutable $tfExecutable
 
         $tfTemplate = (Get-Content -Path "exportedFilter.tf") -replace "resource `"microsoft365wp_device_and_app_management_assignment_filter`" `".*`" {", "$($filterTfName) = {"
@@ -330,7 +313,7 @@ locals {
         $tfTemplate = $tfTemplate | Where-Object { $_ -ne "" }
 
         $tfTemplate | Add-Content -Path $moduleFolder/$localsFileName
-        "" | Add-Content -Path $moduleFolder/$localsFileName
+        "" | Add-Content -Path $moduleFolder/$localsFileName        
     }
 
     $tfFiltersMapping | ConvertTo-Json -Depth 100 | Set-Content -Path $mappingFileName
@@ -346,7 +329,7 @@ locals {
 
 function Import-IntuneFilters {
     param(
-        $mappingFileName = "mappings.filters.json",
+        $mappingFileName = "filters.mappings.json",
         $resourceName = 'module.filters[0].microsoft365wp_device_and_app_management_assignment_filter.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
@@ -359,7 +342,7 @@ function Export-IntuneNotificationMessageTemplates {
         $moduleFolder = "compliance-policies",
         $localsFileName = "def.notification_message.exported.tf",
         $tfLocalsName = "def_notification_message_templates_exported",
-        $mappingFileName = "mappings.notification-message-templates.json",
+        $mappingFileName = "notification-message-templates.mappings.json",
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
     )
@@ -392,7 +375,7 @@ function Export-IntuneNotificationMessageTemplates {
 
 locals {
   $($tfLocalsName) = {
-
+      
 "@ | Set-Content -Path $moduleFolder/$localsFileName
 
     foreach ($notificationMessageTemplate in $notificationMessageTemplates) {
@@ -429,7 +412,7 @@ locals {
         $tfTemplate = $tfTemplate | Where-Object { $_ -ne "" }
 
         $tfTemplate | Add-Content -Path $moduleFolder/$localsFileName
-        "" | Add-Content -Path $moduleFolder/$localsFileName
+        "" | Add-Content -Path $moduleFolder/$localsFileName        
     }
 
     $tfMapping | ConvertTo-Json -Depth 100 | Set-Content -Path $mappingFileName
@@ -443,9 +426,10 @@ locals {
     & $tfExecutable fmt $moduleFolder/$localsFileName
 }
 
+# Seems to be not working correctly.
 function Import-IntuneNotificationMessageTemplates {
     param(
-        $mappingFileName = "mappings.notification-message-templates.json",
+        $mappingFileName = "notification-message-templates.mappings.json",
         $resourceName = 'module.compliance_policies[0].microsoft365wp_notification_message_template.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
@@ -458,12 +442,12 @@ function Export-IntuneCompliancePolicies {
         $moduleFolder = "compliance-policies",
         $localsFileName = "def.exported.tf",
         $tfLocalsName = "all_compliance_policies_exported",
-        $mappingFileName = "mappings.compliance-policies.json",
-        $groupsFileName = "mappings.groups.json",
+        $mappingFileName = "compliance-policies.mappings.json",
+        $groupsFileName = "groups.mappings.json",
         $groupsResourceName = "var.groups_map.{groupTFName}.id",
-        $notificationMessageTemplatesFileName = "mappings.notification-message-templates.json",
+        $notificationMessageTemplatesFileName = "notification-message-templates.mappings.json",
         $notificationMessageTemplatesResourceName = 'microsoft365wp_notification_message_template.all["{nmTFName}"].id',
-        $filterFileName = "mappings.filters.json",
+        $filterFileName = "filters.mappings.json",
         $filterResourceName = 'var.filters_map.{filterTFName}.id',
         $tfExecutable = "tofu",
         [switch]$overwrite = $false
@@ -530,7 +514,7 @@ locals {
         # Replace notification message template object with reference
         foreach ($uid in $notificationMessageTemplatesMap.Keys) {
             $notificationMessageTemplateString = $notificationMessageTemplatesResourceName -replace "{nmTFName}", $notificationMessageTemplatesMap[$uid]
-            $tfTemplate = $tfTemplate -replace "(\s*)notification_template_id\s*=(\s*)`"$uid`"", "`$1notification_template_id   = try($notificationMessageTemplateString, `"00000000-0000-0000-0000-000000000000`")"
+            $tfTemplate = $tfTemplate -replace "(\s*)notification_template_id\s*=(\s*)`"$uid`"", "`$1notification_template_id   = $notificationMessageTemplateString"
         }
 
         # Replace group object with reference
@@ -548,14 +532,14 @@ locals {
 
         # Warn if tfTemplate is contains a unique identifier (that is not resolved)
         if ($tfTemplate -match "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}") {
-            "## Found a unique identifier in $policyTfName that is not resolved." >> log.txt
+            "## Found a unique identifier in $groupTfName that is not resolved." >> log.txt
         }
 
         # Remove empty lines
         $tfTemplate = $tfTemplate | Where-Object { $_ -ne "" }
 
         $tfTemplate | Add-Content -Path $moduleFolder/$localsFileName
-        "" | Add-Content -Path $moduleFolder/$localsFileName
+        "" | Add-Content -Path $moduleFolder/$localsFileName        
     }
 
     $tfMapping | ConvertTo-Json -Depth 100 | Set-Content -Path $mappingFileName
@@ -571,10 +555,118 @@ locals {
 
 function Import-IntuneCompliancePolicies {
     param(
-        $mappingFileName = "mappings.compliance-policies.json",
+        $mappingFileName = "compliance-policies.mappings.json",
         $resourceName = 'module.compliance_policies[0].microsoft365wp_device_compliance_policy.all["{TFName}"]',
         $tfExecutable = "tofu"
     )
 
     Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable
 }
+
+function Export-IntuneConfigurationPolicies {
+    param (
+        $moduleFolder = "configuration-policies",
+        $localsFileName = "def.exported.tf",
+        $tfLocalsName = "all_configuration_policies_exported",
+        $mappingFileName = "configuration-policies.mappings.json",
+        $groupsFileName = "groups.mappings.json",
+        $groupsResourceName = "var.groups_map.{groupTFName}.id",
+        $filterFileName = "filters.mappings.json",
+        $filterResourceName = 'var.filters_map.{filterTFName}.id',
+        $tfExecutable = "tofu",
+        [switch]$overwrite = $false
+    )
+
+    $groupsMap = Get-Content -Raw $groupsFileName | ConvertFrom-Json -Depth 100 -AsHashtable
+    $filterMap = Get-Content -Raw $filterFileName | ConvertFrom-Json -Depth 100 -AsHashtable
+
+    $configurationPolicies = Invoke-MGGraphRequestAll -Uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?$expand=assignments,settings'
+
+    if (-not $overwrite) {
+        if (Test-Path $moduleFolder/$localsFileName) {
+            "## File $moduleFolder/$localsFileName already exists."
+            throw "File $moduleFolder/$localsFileName already exists."
+        }
+        if (Test-Path $mappingFileName) {
+            "## File $mappingFileName already exists."
+            throw "File $mappingFileName already exists."
+        }
+    }
+
+    $tfMapping = @{
+    }
+
+    # Make sure directories exist
+    if (-not (Test-Path $moduleFolder)) { New-Item -ItemType Directory -Path $moduleFolder }
+    if (-not (Test-Path "$moduleFolder/json")) { New-Item -ItemType Directory -Path "$moduleFolder/json" }
+
+    @"
+# ------------------------------------------------------------------------------------------------------------
+# Intune Configuration Pol. (Settings Catalog) - File exported via script 'tools/export/wf-export-library.ps1'
+# ------------------------------------------------------------------------------------------------------------
+
+locals {
+  $($tfLocalsName) = {
+
+"@ | Set-Content -Path $moduleFolder/$localsFileName
+
+    foreach ($policy in $configurationPolicies) {
+        $policyTfName = build-name -name $policy.name
+        # Check that the mapping does not already contain the id or PolicyTFName
+        if ($tfMapping.ContainsKey($policy.id) -or $tfMapping.ContainsValue($policyTfName)) {
+            "## Policy ID or PolicyTFName already exists in the mapping."
+            "## Policy ID: $($policy.id)"
+            "## PolicyTFName: $policyTfName"
+            throw "Policy ID or PolicyTFName already exists in the mapping."
+        }
+        $tfMapping[$policy.id] = $policyTfName
+
+        # Create a raw JSON export as backup
+        $policy | ConvertTo-Json -Depth 100 | Set-Content -Path "$moduleFolder/json/$policyTfName.json"
+
+        Generate-TFConfig -resourceType "microsoft365wp_device_management_configuration_policy" -importId $policy.id -resourceName $policyTfName -outPath "exportedPolicy.tf" -terraformExecutable $tfExecutable
+
+        $tfTemplate = (Get-Content -Path "exportedPolicy.tf") -replace "resource `"microsoft365wp_device_management_configuration_policy`" `".*`" {", "$($policyTfName) = {"
+
+        # Replace filter object with reference
+        foreach ($uid in $filterMap.Keys) {
+            $filterString = $filterResourceName -replace "{filterTFName}", $filterMap[$uid]
+            $tfTemplate = $tfTemplate -replace "(\s*)filter_id\s*=\s*`"$uid`"", "`$1filter_id = $filterString"
+        }
+
+        # Replace group object with reference
+        foreach ($uid in $groupsMap.Keys) {
+            $groupString = $groupsResourceName -replace "{groupTFName}", $groupsMap[$uid]
+            $tfTemplate = $tfTemplate -replace "(\s*)group_id\s*=\s*`"$uid`"", "`$1group_id = $groupString"
+        }
+        
+        # Remove unneeded attributes
+        $attributesToRemove = @()
+        foreach ($attribute in $attributesToRemove) {
+            "## replacing $attribute"
+            $tfTemplate = $tfTemplate -replace "(?im)^\s*$attribute\s*=\s*.*$", ''
+        }
+        
+        # Warn if tfTemplate is contains a unique identifier (that is not resolved)
+        if ($tfTemplate -match "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}") {
+            "## Found a unique identifier in $groupTfName that is not resolved." >> log.txt
+        }
+        
+        # Remove empty lines
+        $tfTemplate = $tfTemplate | Where-Object { $_ -ne "" }
+        
+        $tfTemplate | Add-Content -Path $moduleFolder/$localsFileName
+        "" | Add-Content -Path $moduleFolder/$localsFileName        
+    }
+        
+    $tfMapping | ConvertTo-Json -Depth 100 | Set-Content -Path $mappingFileName
+    @'
+}
+}
+'@ | Add-Content -Path $moduleFolder/$localsFileName
+        
+    Remove-Item -Path "exportedPolicy.tf"
+        
+    & $tfExecutable fmt $moduleFolder/$localsFileName
+}
+        
