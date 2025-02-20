@@ -17,7 +17,11 @@
     - [Basic operations](#basic-operations)
     - [Modules](#modules)
   - [Importing existing resources](#importing-existing-resources)
-- [Exporting existing Intune or Entra ID objects to Terraform](#exporting-existing-intune-or-entra-id-objects-to-terraform)
+- [Exporting a single existing Intune or Entra ID object to Terraform](#exporting-a-single-existing-intune-or-entra-id-object-to-terraform)
+- [Importing / Managing an existing Tenant](#importing--managing-an-existing-tenant)
+  - [Export Groups, Filters, Policies](#export-groups-filters-policies)
+  - [Deploying](#deploying)
+  - [Mapping and Importing](#mapping-and-importing)
 
 # Overview
 
@@ -167,7 +171,7 @@ The next time you run `terraform plan` or `terraform apply` Terraform will recog
 
 Be aware - running `terraform destroy` or removing the template will delete the group from AzureAD.
 
-# Exporting existing Intune or Entra ID objects to Terraform
+# Exporting a single existing Intune or Entra ID object to Terraform
 
 We include [a script](./tools/aad2tf/ReadMe.md) to create a Terraform template from an existing Entra ID or Intune object. This script will create a .tf file if given the correct type and object id. You can use this to export existing objects or understand how to write a new object.
 
@@ -177,3 +181,79 @@ Example to export a device configuration policy:
 ```
 
 Make sure to load the environment variables (for authentication) before running the script.
+
+# Importing / Managing an existing Tenant 
+
+Similiar to the script mentioned above, we offer a PowerShell module that allows to export objects from 
+
+EntraID
+- Groups
+
+Intune
+- Filters
+- Notification Templates (Compliance)
+- Compliance Policies
+- Settings Catalog Policies ("Configuration Policies")
+
+directly into the appropriate files here in the repository, so that they are available as map and can be controlled e.g. via `configuration_policy_customization` or `compliance_policy_customization` variables.
+
+to use it, import it 
+```powershell
+. ./tools/export/wf-export-library.ps1
+```
+
+Requirements:
+- An existing connection with `Connect-MgGraph` to the tenant
+- `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID` set in the environment
+
+The appropriate permissions are required to export the objects.
+
+The exports have to be done in a certain order, to allow the dependencies to be resolved.
+
+## Export Groups, Filters, Policies
+
+go to the root folder of the Quickstart repository and run the following commands:
+
+```powershell
+Export-EntraIDGroups -overwrite
+Export-IntuneFilters -overwrite
+Export-IntuneNotificationMessageTemplates -overwrite
+Export-IntuneCompliancePolicies -overwrite
+Export-IntuneConfigurationPolicies -overwrite
+```
+
+This will overwrite existing files in each module, like `configuration-policies/def.exported.tf` or `compliance-policies/def.exported.tf`. 
+
+Additionally it will create a JSON mappings `*.mappings.json` for each object typ in the root folder. These are used to 
+- resolve dependencies between objects
+- map the objects when importing an existing tenant
+
+If desired, this can serve as a backup for you policies. By default each export also create a raw dump of the JSON objects from MS Graph which might help in case of issues.
+
+## Deploying 
+
+After the exports are done, you can use Terraform/Tofu to deploy the objects to the tenant. 
+
+```powershell
+tofu init
+tofu plan
+tofu apply
+```
+
+## Mapping and Importing
+
+If you want to take an existing tenant into management, you can use the mappings to import the objects a Terraform state.
+
+Make sure to have the environment variables set and the connection to the tenant established. Also make sure to have the mappings in the root folder and the exported files in place.
+
+The module offers CMDlets to call Terraform/Tofu to import the objects.
+
+```powershell
+tofu init
+Import-EntraIDGroups
+Import-IntuneFilters
+Import-IntuneNotificationMessageTemplates
+Import-IntuneCompliancePolicies
+Import-IntuneConfigurationPolicies
+``` 
+
