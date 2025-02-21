@@ -211,7 +211,8 @@ function Import-MappedObjects {
         $mappingFileName = "groups.mappings.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
         $objectVar = "{TFName}",
-        $tfExecutable = "tofu"
+        $tfExecutable = "tofu",
+        $idPrefix = ""
     )
 
     # Read the mapping file
@@ -221,7 +222,7 @@ function Import-MappedObjects {
     foreach ($uid in $groupMapping.Keys) {
         $groupTFName = $groupMapping[$uid]
         $resourceString = $resourceName -replace $objectVar, $groupTFName
-        & $tfExecutable import $resourceString $uid
+        & $tfExecutable import $resourceString ($idPrefix + $uid)
     }
 
 }
@@ -230,10 +231,11 @@ function Import-EntraIDGroups {
     param(
         $mappingFileName = "groups.mappings.json",
         $resourceName = 'module.groups[0].azuread_group.all["{TFName}"]',
-        $tfExecutable = "tofu"
+        $tfExecutable = "tofu",
+        $idPrefix = "/groups/"
     )
 
-    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable
+    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable -idPrefix $idPrefix
 }
 
 function Export-IntuneFilters {
@@ -670,3 +672,12 @@ locals {
     & $tfExecutable fmt $moduleFolder/$localsFileName
 }
         
+function Import-IntuneConfigurationPolicies {
+    param(
+        $mappingFileName = "configuration-policies.mappings.json",
+        $resourceName = 'module.configuration_policies[0].microsoft365wp_device_management_configuration_policy.all["{TFName}"]',
+        $tfExecutable = "tofu"
+    )
+        
+    Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable
+}
