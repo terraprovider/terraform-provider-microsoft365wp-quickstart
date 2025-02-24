@@ -565,6 +565,7 @@ function Import-IntuneCompliancePolicies {
     Import-MappedObjects -mappingFileName $mappingFileName -resourceName $resourceName -tfExecutable $tfExecutable
 }
 
+# This one seems not to correctly export "template_reference" attribute with OpenTofu (it is not exported at all). Works with Terraform.
 function Export-IntuneConfigurationPolicies {
     param (
         $moduleFolder = "configuration-policies",

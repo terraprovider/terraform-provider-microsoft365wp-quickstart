@@ -20,8 +20,12 @@
 - [Exporting a single existing Intune or Entra ID object to Terraform](#exporting-a-single-existing-intune-or-entra-id-object-to-terraform)
 - [Importing / Managing an existing Tenant](#importing--managing-an-existing-tenant)
   - [Export Groups, Filters, Policies](#export-groups-filters-policies)
+    - [Phase 1](#phase-1)
+    - [Phase 2](#phase-2)
   - [Deploying](#deploying)
   - [Mapping and Importing](#mapping-and-importing)
+    - [Phase 1](#phase-1-1)
+    - [Phase 2](#phase-2-1)
 
 # Overview
 
@@ -212,23 +216,36 @@ The exports have to be done in a certain order, to allow the dependencies to be 
 
 ## Export Groups, Filters, Policies
 
-go to the root folder of the Quickstart repository and run the following commands:
+Go to the root folder of the Quickstart repository and run the commands noted in each phase.
+
+Specifying `-overwrite` will overwrite existing files in each module, like `configuration-policies/def.exported.tf` or `compliance-policies/def.exported.tf`. 
+
+Additionally the commands will create JSON mappings `*.mappings.json` for each object typ in the root folder. These are used to 
+- resolve dependencies between objects
+- map the objects when importing an existing tenant
+
+### Phase 1
 
 ```powershell
 Export-EntraIDGroups -overwrite
 Export-IntuneFilters -overwrite
 Export-IntuneNotificationMessageTemplates -overwrite
+```
+
+If you want to import and manage an existing tenant, stop here and import these objects first. See [Mapping and Importing](#mapping-and-importing) below. Only after these objects are imported to your state continue with the next phase.
+
+Why? The objects have dependencies between them. E.g. a Compliance Policy can reference a Notification Template. The import of Notification Templates into the state might fail, if the Compliance Policy (referencing the Notification Template) is already present in the config. 
+
+### Phase 2
+
+Export objects that can reference the objects from Phase 1.
+
+```powershell
 Export-IntuneCompliancePolicies -overwrite
 Export-IntuneConfigurationPolicies -overwrite
 ```
 
-This will overwrite existing files in each module, like `configuration-policies/def.exported.tf` or `compliance-policies/def.exported.tf`. 
-
-Additionally it will create a JSON mappings `*.mappings.json` for each object typ in the root folder. These are used to 
-- resolve dependencies between objects
-- map the objects when importing an existing tenant
-
-If desired, this can serve as a backup for you policies. By default each export also create a raw dump of the JSON objects from MS Graph which might help in case of issues.
+If desired, this output can serve as a backup for you policies. By default each export also creates a raw dump of the JSON objects from MS Graph which might help in case of issues.
 
 ## Deploying 
 
@@ -240,19 +257,31 @@ tofu plan
 tofu apply
 ```
 
+Be aware this will create new objects in the tenant. If you want to update existing objects, you have to import them first. See [Mapping and Importing](#mapping-and-importing) below.
+
 ## Mapping and Importing
 
-If you want to take an existing tenant into management, you can use the mappings to import the objects a Terraform state.
+If you want to take an existing tenant into management, you can use the JSON mappings created while exporting to import the objects a Terraform state.
 
 Make sure to have the environment variables set and the connection to the tenant established. Also make sure to have the mappings in the root folder and the exported files in place.
 
 The module offers CMDlets to call Terraform/Tofu to import the objects.
 
+If you follow the recommended order of operation, split it in to two phases:
+
+### Phase 1
 ```powershell
 tofu init
 Import-EntraIDGroups
 Import-IntuneFilters
 Import-IntuneNotificationMessageTemplates
+```
+
+If needed, go back to [Export Groups, Filters, Policies](#export-groups-filters-policies) and export the remaining objects.
+
+### Phase 2
+
+```powershell
 Import-IntuneCompliancePolicies
 Import-IntuneConfigurationPolicies
 ``` 
