@@ -13,16 +13,16 @@ manage_filters = true
 manage_compliance_policies = true
 
 # Create Configuration Policies (= Settings Catalog Policies)
-manage_configuration_policies = false
+manage_configuration_policies = true
 
 ## Conditional Access is currently only implemented to a minimum degree to enforce MFA.
-manage_conditional_access = false
+manage_conditional_access = true
 
 # Create Device Configuration Policies (e.g. OMA Policies)
-manage_device_configuration = false
+manage_device_configuration = true
 
 # Mange Windows Device Enrollment Configurations ("Enrollment Status Page" and "Limits")
-manage_device_enrollment_configurations = false
+manage_device_enrollment_configurations = true
 
 ## Enable/Disable Features accross Modules
 
@@ -30,7 +30,7 @@ manage_device_enrollment_configurations = false
 enable_workplace_windows_macos = true
 
 # Create iOS/Android Policies regarding configuration and compliance? (configures multiple modules)
-enable_mobile = false
+enable_mobile = true
 
 ## Settings/Variables
 
@@ -54,6 +54,3 @@ configuration_macos_firewall = {
 }
 
 ## See `variables.tf` for more settings
-manage_autopilot_profiles              = false
-manage_intents                         = false
-manage_windows_feature_update_profiles = false
