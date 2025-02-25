@@ -14,7 +14,7 @@ terraform {
     storage_account_name = "storageaccountname"
     subscription_id      = "000..."
     container_name       = "tfstate"
-    key                  = "terraform-qs.tfstate"
+    key                  = "terraform.tfstate"
     use_azuread_auth     = true
     use_oidc             = true
     snapshot             = true
