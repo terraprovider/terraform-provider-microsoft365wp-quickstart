@@ -12,7 +12,7 @@ terraform {
   }
   backend "azurerm" {
     storage_account_name = "c4a8toydexports01"
-    subscription_id      = "3f0a7847-0bd4-4efe-86c9-84db2cb032e4"
+    subscription_id      = "3f0a7847-..."
     container_name       = "tfstate"
     key                  = "terraform-qs.tfstate"
     use_azuread_auth     = true

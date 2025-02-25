@@ -11,6 +11,7 @@ locals {
     display_name = format("%s%s%s", var.displayname_prefix, value.display_name, var.displayname_suffix)
     platform     = value.platform
     rule         = value.rule
+    description  = try(value.description, "")
   } }
 
   # If you have more logic to disable filters, you can add it here

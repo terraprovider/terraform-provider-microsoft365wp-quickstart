@@ -23,6 +23,8 @@
     - [Phase 1](#phase-1)
     - [Phase 2](#phase-2)
   - [Deploying](#deploying)
+  - [Mail-Enabled Groups](#mail-enabled-groups)
+  - [Deactivating default / demonstration Groups and Policies](#deactivating-default--demonstration-groups-and-policies)
   - [Mapping and Importing](#mapping-and-importing)
     - [Phase 1](#phase-1-1)
     - [Phase 2](#phase-2-1)
@@ -35,7 +37,7 @@ This project aims to provide a reference implementation of the [Terraform Provid
 
 For the Terraform templates you will need:
 
-* A recent build of [Terraform](https://developer.hashicorp.com/terraform/downloads?product_intent=terraform) (tested with 1.7.5)
+* A recent build of [Terraform](https://developer.hashicorp.com/terraform/) or [OpenTofu](https://opentofu.org/). This guide will reference Terraform by default.
 * An EntraID Tenant and an App Registration in this tenant. See [Authentication](#authentication) for details.
 
 
@@ -100,7 +102,7 @@ Be aware, by default our workflow use OpenTofu instead of TerraForm.
 2. fill/replace the placeholders in `terraform.tf` with your values
 3. Read and modify the `terraform.tfvar` to match your needs.
 4. Load the environment variables (see [Authenticating Terraform to Entra ID](#Authenticating-Terraform-to-Entra-ID))
-5. Run `terraform init` to initialize the Terraform environment. This will also download the required Terraform providers incl. the Workplace provider.
+5. Run `terraform init` to initialize the Terraform environment. This will also download the required Terraform providers incl. TerraProvider.
 6. Run `terraform apply` to create all resources.
 
 ## Considerations and Preparation
@@ -186,9 +188,9 @@ Example to export a device configuration policy:
 
 Make sure to load the environment variables (for authentication) before running the script.
 
-# Importing / Managing an existing Tenant 
+# Importing / Managing an existing Tenant
 
-Similiar to the script mentioned above, we offer a PowerShell module that allows to export objects from 
+Similar to the script mentioned above, we offer a PowerShell module that allows to export objects from
 
 EntraID
 - Groups
@@ -201,7 +203,7 @@ Intune
 
 directly into the appropriate files here in the repository, so that they are available as map and can be controlled e.g. via `configuration_policy_customization` or `compliance_policy_customization` variables.
 
-to use it, import it 
+to use it, import it
 ```powershell
 . ./tools/export/wf-export-library.ps1
 ```
@@ -218,11 +220,13 @@ The exports have to be done in a certain order, to allow the dependencies to be 
 
 Go to the root folder of the Quickstart repository and run the commands noted in each phase.
 
-Specifying `-overwrite` will overwrite existing files in each module, like `configuration-policies/def.exported.tf` or `compliance-policies/def.exported.tf`. 
+Specifying `-overwrite` will overwrite existing files in each module, like `configuration-policies/def.exported.tf` or `compliance-policies/def.exported.tf`.
 
-Additionally the commands will create JSON mappings `*.mappings.json` for each object typ in the root folder. These are used to 
+Additionally the commands will create JSON mappings `*.mappings.json` for each object typ in the root folder. These are used to
 - resolve dependencies between objects
 - map the objects when importing an existing tenant
+
+It is normal to see warnings about missing attributes - not every attribute can be exported.
 
 ### Phase 1
 
@@ -234,7 +238,7 @@ Export-IntuneNotificationMessageTemplates -overwrite
 
 If you want to import and manage an existing tenant, stop here and import these objects first. See [Mapping and Importing](#mapping-and-importing) below. Only after these objects are imported to your state continue with the next phase.
 
-Why? The objects have dependencies between them. E.g. a Compliance Policy can reference a Notification Template. The import of Notification Templates into the state might fail, if the Compliance Policy (referencing the Notification Template) is already present in the config. 
+Why? The objects have dependencies between them. E.g. a Compliance Policy can reference a Notification Template. The import of Notification Templates into the state might fail, if the Compliance Policy (referencing the Notification Template) is already present in the config.
 
 ### Phase 2
 
@@ -247,17 +251,37 @@ Export-IntuneConfigurationPolicies -overwrite
 
 If desired, this output can serve as a backup for you policies. By default each export also creates a raw dump of the JSON objects from MS Graph which might help in case of issues.
 
-## Deploying 
+## Deploying
 
-After the exports are done, you can use Terraform/Tofu to deploy the objects to the tenant. 
+After the exports are done, you can use Terraform/Tofu to deploy the objects to the tenant.
 
 ```powershell
-tofu init
-tofu plan
-tofu apply
+terraform init
+terraform plan
+terraform apply
 ```
 
 Be aware this will create new objects in the tenant. If you want to update existing objects, you have to import them first. See [Mapping and Importing](#mapping-and-importing) below.
+
+## Mail-Enabled Groups
+
+Entra ID can report groups that are not directly managed by Entra ID itself, like Exchange-based groups. To avoid complications, mail-enabled groups are not exported by the script by default, so that the exported configuration can be used to create and manage groups via Entra ID.
+
+You can override this behavior by using `Export-EntraIDGroups -includeMailEnabled` to include mail-enabled groups in the export.
+
+## Deactivating default / demonstration Groups and Policies
+
+If you only want to manage groups and policies from your export and not the included examples, consider deactivating these objects. Example: Deactivate the "All Autopilot Devices" group from the quickstart template:
+
+```terraform
+groups_customization = {
+  groups_disabled = [
+    "all_autopilot_device"
+  ]
+}
+```
+
+If you override resource names in the export with the same name as the examples, the example objects will not be created. No other operation is necessary in this case.
 
 ## Mapping and Importing
 
@@ -271,7 +295,7 @@ If you follow the recommended order of operation, split it in to two phases:
 
 ### Phase 1
 ```powershell
-tofu init
+terraform init
 Import-EntraIDGroups
 Import-IntuneFilters
 Import-IntuneNotificationMessageTemplates
@@ -284,5 +308,6 @@ If needed, go back to [Export Groups, Filters, Policies](#export-groups-filters-
 ```powershell
 Import-IntuneCompliancePolicies
 Import-IntuneConfigurationPolicies
-``` 
+```
 
+After the import is done, you should verify the state and run `terraform plan` to see if the state matches the actual tenant state. It is not expected to be perfect - this export/import serves as a starting point to manage your tenant with Terraform.
