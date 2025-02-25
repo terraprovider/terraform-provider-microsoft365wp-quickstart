@@ -210,6 +210,8 @@ to use it, import it
 
 Requirements:
 - An existing connection with `Connect-MgGraph` to the tenant
+- TerraForm (preferred) OpenTofu
+- PowerShell Module: `Microsoft.Graph.Authentication`
 - `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID` set in the environment
 
 The appropriate permissions are required to export the objects.
