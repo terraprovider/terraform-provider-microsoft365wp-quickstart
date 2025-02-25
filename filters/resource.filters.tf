@@ -4,4 +4,5 @@ resource "microsoft365wp_device_and_app_management_assignment_filter" "all" {
   display_name = each.value.display_name
   platform     = each.value.platform
   rule         = each.value.rule
+  description  = each.value.description
 }

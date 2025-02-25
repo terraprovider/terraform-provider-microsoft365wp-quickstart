@@ -4,8 +4,8 @@
 
 locals {
   base_azuread_groups_resource_map = { for group_key, group in local.base_azuread_groups_map : group_key => {
-    id           = azuread_group.all[group_key].id
-    display_name = azuread_group.all[group_key].display_name
+    id           = try(replace(azuread_group.all[group_key].id, "/[/]groups[/]/", ""), null)
+    display_name = try(azuread_group.all[group_key].display_name, null)
   } }
 }
 

@@ -5,9 +5,9 @@ The following requirements are needed by this module:
 
 - <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.7)
 
-- <a name="requirement_azuread"></a> [azuread](#requirement\_azuread) (2.47.0)
+- <a name="requirement_azuread"></a> [azuread](#requirement\_azuread) (3.1.0)
 
-- <a name="requirement_microsoft365wp"></a> [microsoft365wp](#requirement\_microsoft365wp) (0.12.9)
+- <a name="requirement_microsoft365wp"></a> [microsoft365wp](#requirement\_microsoft365wp) (0.15.1)
 
 ## Required Inputs
 
