@@ -199,7 +199,7 @@ Intune
 - Filters
 - Notification Templates (Compliance)
 - Compliance Policies
-- Settings Catalog Policies ("Configuration Policies")
+- Settings Catalog and Endpoint Sec. Policies ("Configuration Policies")
 
 directly into the appropriate files here in the repository, so that they are available as map and can be controlled e.g. via `configuration_policy_customization` or `compliance_policy_customization` variables.
 
